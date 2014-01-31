@@ -1,39 +1,36 @@
 package actors
 
-import scala.collection.parallel.ParSet
-
 import play.api.libs.ws.WS
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor.{ Props, ActorRef, Actor }
+import akka.event.EventStream
 
 object MessageStream {
 
-    case class Subscribe(actor: ActorRef)
+  type Message = String
 
-    case class Unsubscribe(actor: ActorRef)
-    
+  case class Subscribe(actor: ActorRef)
+
+  case class Unsubscribe(actor: ActorRef)
+
+  case class Broadcast(message: Message)
+
 }
 
-class MessageStream extends Actor {
+class MessageStream(messages: List[MessageStream.Message]) extends Actor {
 
-    import MessageStream._
+  import MessageStream._
 
-    type Message = String
+  val eventStream = new EventStream
 
-    var subscribers = ParSet[ActorRef]()
+  def receive = {
 
-    val messages = Enumerator[Message]("The discarded bicycle pressures the rod.", "How does the definitive plaster honor an appointed scholar?", "A hollow parade tends a worthwhile deaf. Why can't the circle migrate?")
-    
-    val (streamEnumerator, streamChannel) = Concurrent.broadcast[Message]
+    case Subscribe(actor: ActorRef) => eventStream.subscribe(sender, classOf[SocketEndpoint.NewMessage])
 
-    streamEnumerator |>>> Iteratee.foreach[Message](m => subscribers.foreach(_ ! m))
+    case Unsubscribe(actor: ActorRef) => eventStream.unsubscribe(sender)
 
-    def receive = {
-        
-        case  Subscribe(actor: ActorRef) => subscribers = subscribers + actor
-
-        case  Unsubscribe(actor: ActorRef) => subscribers = subscribers - actor
-    }
+    case Broadcast(message: Message) => eventStream.publish(SocketEndpoint.NewMessage(message))
+  }
 }
