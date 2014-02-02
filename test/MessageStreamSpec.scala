@@ -41,18 +41,18 @@ class OfflineMessageStreamSpec extends TestKit(ActorSystem("OMSSystem",
     shutdown(system)
   }
 
-  val oms = system.actorOf(Props(classOf[OfflineMessageStream], List("one", "two", "three")), "oms")
+  val oms = system.actorOf(Props(classOf[OfflineMessageStream], self, List("one", "two", "three")), "oms")
 
   "an unstarted OfflineMessageStream Actor" should {
     "not publish any messages" in {
-      oms ! MessageStream.Subscribe(testActor)
+      //oms ! MessageStream.Subscribe(testActor)
       expectNoMsg
     }
   }
 
   "an started OfflineMessageStream Actor" should {
     "publish a message within 3 seconds" in {
-      oms ! MessageStream.Subscribe(testActor)
+      //oms ! MessageStream.Subscribe(testActor)
       oms ! MessageStream.StartStream()
       expectMsgAllClassOf(3000 milliseconds, classOf[SocketEndpoint.NewMessage])
     }

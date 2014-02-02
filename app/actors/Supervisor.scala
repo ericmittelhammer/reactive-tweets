@@ -34,7 +34,7 @@ class Supervisor(messageStream: ActorRef) extends Actor {
 
     case SocketClosed(closedSocket: ActorRef) => {
       sockets = sockets - closedSocket
-      messageStream ! MessageStream.Unsubscribe(closedSocket)
+      //messageStream ! MessageStream.Unsubscribe(closedSocket)
       if (sockets.size == 0) messageStream ! MessageStream.StopStream()
     }
 
