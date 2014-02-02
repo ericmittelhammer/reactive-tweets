@@ -10,11 +10,15 @@ import akka.event.EventStream
 
 object Supervisor {
 
-  case class NewSocket(out: Enumerator[MessageStream.Message])
+  case class NewSocket(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message])
+
+  case class SocketClosed(closedSocket: ActorRef)
+
+  def props(messageStream: ActorRef) = Props(classOf[Supervisor], messageStream)
 
 }
 
-class Supervisor extends Actor {
+class Supervisor(messageStream: ActorRef) extends Actor {
 
   import Supervisor._
 
@@ -22,10 +26,16 @@ class Supervisor extends Actor {
 
   def receive = {
 
-    case NewSocket(out: Enumerator[MessageStream.Message]) => {
-      val newSocket = context.actorOf(SocketEndpoint.props(out))
-
+    case NewSocket(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message]) => {
+      val newSocket = context.actorOf(SocketEndpoint.props(in, out))
+      if (sockets.size == 0) messageStream ! MessageStream.StartStream()
       sockets = sockets + newSocket
+    }
+
+    case SocketClosed(closedSocket: ActorRef) => {
+      sockets = sockets - closedSocket
+      messageStream ! MessageStream.Unsubscribe(closedSocket)
+      if (sockets.size == 0) messageStream ! MessageStream.StopStream()
     }
 
   }

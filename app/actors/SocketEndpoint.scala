@@ -11,11 +11,11 @@ object SocketEndpoint {
 
   case class NewMessage(message: MessageStream.Message)
 
-  def props(out: Enumerator[MessageStream.Message]) = Props(classOf[SocketEndpoint], out)
+  def props(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message]) = Props(classOf[SocketEndpoint], in, out)
 
 }
 
-class SocketEndpoint(out: Enumerator[MessageStream.Message]) extends Actor {
+class SocketEndpoint(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message]) extends Actor {
 
   import SocketEndpoint._
 

@@ -11,9 +11,11 @@ import akka.actor.ActorSystem
 
 import actors.Supervisor
 
+import global.Global
+
 object Application extends Controller {
 
-  val sockets = Akka.system.actorOf(Props(classOf[Supervisor]))
+  //val messageStream = Global.messageStream
 
   def index = Action {
     Ok(views.html.index("Your new application is ready."))
