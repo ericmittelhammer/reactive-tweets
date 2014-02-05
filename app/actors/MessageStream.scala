@@ -8,6 +8,7 @@ import akka.actor.{ Props, ActorRef, Actor }
 import akka.event.{ EventStream, Logging, LoggingReceive }
 
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 trait MessageStream
 
