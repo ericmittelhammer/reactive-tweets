@@ -28,12 +28,25 @@ object MessageStream {
 
 object OfflineMessageStream {
 
-  def props(supervisor: ActorRef, messages: List[MessageStream.Message], minMilliseconds: Int, maxMilliseconds: Int) =
-    Props(classOf[OfflineMessageStream], supervisor, messages, minMilliseconds, maxMilliseconds)
+  def props(
+    supervisor: ActorRef,
+    messages: List[MessageStream.Message],
+    minMilliseconds: Int,
+    maxMilliseconds: Int) =
+    Props(
+      classOf[OfflineMessageStream],
+      supervisor,
+      messages,
+      minMilliseconds,
+      maxMilliseconds)
 
 }
 
-class OfflineMessageStream(supervisor: ActorRef, messageList: List[MessageStream.Message], minMilliseconds: Int, maxMilliseconds: Int) extends Actor with MessageStream {
+class OfflineMessageStream(
+    supervisor: ActorRef,
+    messageList: List[MessageStream.Message],
+    minMilliseconds: Int,
+    maxMilliseconds: Int) extends Actor with MessageStream {
 
   import MessageStream._
 
@@ -50,17 +63,22 @@ class OfflineMessageStream(supervisor: ActorRef, messageList: List[MessageStream
       self ! NewMessage(i.next) //send the first message to myself
     }
     case StopStream() => log.warning("Stream already stopped")
-    case NewMessage(message: Message) => log.warning("Trying to brodcast to a stopped stream")
+    case NewMessage(message: Message) =>
+      log.warning("Trying to brodcast to a stopped stream")
   }
 
   def started: Receive = LoggingReceive {
     case StartStream() => log.warning("Stream already started")
     case StopStream => context.become(stopped)
     case NewMessage(message: Message) => {
-      if (!i.hasNext) i = messageList.iterator // reset the iterator if we've reached the end of the list
+      // reset the iterator if we've reached the end of the list
+      if (!i.hasNext) i = messageList.iterator
       supervisor ! NewMessage(message) //send the message to the supervisor
-      val nextMessageAt = scala.util.Random.nextInt((maxMilliseconds - minMilliseconds) + 1) + minMilliseconds
-      context.system.scheduler.scheduleOnce(nextMessageAt milliseconds) { //schedule the next message to be sent
+      val nextMessageAt =
+        scala.util.Random.nextInt(
+          (maxMilliseconds - minMilliseconds) + 1) + minMilliseconds
+      context.system.scheduler.scheduleOnce(nextMessageAt milliseconds) {
+        //schedule the next message to be sent 
         self ! NewMessage(i.next)
       }
     }

@@ -6,11 +6,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
 
 import akka.actor.{ Props, ActorRef, Actor }
-import akka.event.EventStream
+import akka.event.{ EventStream, Logging, LoggingReceive }
+
+import scala.collection.parallel.ParSet
 
 object Supervisor {
 
-  case class NewSocket(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message])
+  case class NewSocket(socket: ActorRef)
 
   case class SocketClosed(closedSocket: ActorRef)
 
@@ -22,12 +24,13 @@ class Supervisor(messageStream: ActorRef) extends Actor {
 
   import Supervisor._
 
-  var sockets = Set[ActorRef]()
+  val log = Logging(context.system, this)
 
-  def receive = {
+  var sockets = ParSet[ActorRef]()
 
-    case NewSocket(in: Iteratee[MessageStream.Message, String], out: Enumerator[MessageStream.Message]) => {
-      val newSocket = context.actorOf(SocketEndpoint.props(in, out))
+  def receive = LoggingReceive {
+
+    case NewSocket(newSocket: ActorRef) => {
       if (sockets.size == 0) messageStream ! MessageStream.StartStream()
       sockets = sockets + newSocket
     }
@@ -36,6 +39,10 @@ class Supervisor(messageStream: ActorRef) extends Actor {
       sockets = sockets - closedSocket
       //messageStream ! MessageStream.Unsubscribe(closedSocket)
       if (sockets.size == 0) messageStream ! MessageStream.StopStream()
+    }
+
+    case m @ MessageStream.NewMessage(message: MessageStream.Message) => {
+      sockets foreach (_ forward m)
     }
 
   }
