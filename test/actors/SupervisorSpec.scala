@@ -4,7 +4,8 @@ import org.scalatest.{ Matchers, BeforeAndAfterAll, WordSpecLike }
 
 import com.typesafe.config.ConfigFactory
 
-import akka.actor.{ Actor, ActorRef, ActorSystem, Props }
+import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
+import akka.pattern.{ ask }
 import akka.testkit.{ TestKit, TestProbe, ImplicitSender, DefaultTimeout }
 
 import scala.concurrent.duration._
@@ -35,28 +36,49 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
     shutdown(system)
   }
 
-  val messageStream = TestProbe()
-  val socket1 = TestProbe()
-  val socket2 = TestProbe()
-  val supervisor = system.actorOf(Supervisor.props(messageStream = messageStream.ref), "supervisor")
-
   "a supervisor" should {
-    "send the message stream a StartStream message when it's first socket is added" in {
-      supervisor ! Supervisor.NewSocket(socket1.ref)
+    "send the message stream a StartStream message when its first socket is added" in {
+
+      val messageStream = TestProbe()
+      def socketEndpointFactory(a: ActorRefFactory): ActorRef = TestProbe().ref
+
+      val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor")
+
+      supervisor ! Supervisor.NewSocket()
       messageStream.expectMsg(MessageStream.StartStream())
     }
 
-    "send each of it's subscribed sockets a NewMessage" in {
-      supervisor ! Supervisor.NewSocket(socket2.ref)
-      messageStream.expectNoMsg
+    "send each of its subscribed sockets a NewMessage" in {
+
+      val messageStream = TestProbe()
+      val socket1 = TestProbe()
+      val socket2 = TestProbe()
+      val i = List(socket1, socket2).iterator
+      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+
+      val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor2")
+
+      supervisor ! Supervisor.NewSocket()
+      supervisor ! Supervisor.NewSocket()
       supervisor ! MessageStream.NewMessage("hello")
       socket1.expectMsg(MessageStream.NewMessage("hello"))
       socket2.expectMsg(MessageStream.NewMessage("hello"))
     }
 
-    "send a StopStream message when it's final socket has been closed" in {
+    "send a StopStream message when its final socket has been closed" in {
+
+      val messageStream = TestProbe()
+      val socket1 = TestProbe()
+      val socket2 = TestProbe()
+      val i = List(socket1, socket2).iterator
+      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+
+      val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor3")
+
+      supervisor ! Supervisor.NewSocket()
+      supervisor ! Supervisor.NewSocket()
+
       supervisor ! Supervisor.SocketClosed(socket1.ref)
-      messageStream.expectNoMsg
       supervisor ! Supervisor.SocketClosed(socket2.ref)
       messageStream.expectMsg(MessageStream.StopStream())
     }
