@@ -16,18 +16,20 @@ object Supervisor {
 
   case class SocketClosed(closedSocket: ActorRef)
 
-  def props(messageStream: ActorRef,
-    socketEndpointFactory: (Props, ActorRefFactory, Option[String]) => ActorRef) =
-    Props(classOf[Supervisor], messageStream, socketEndpointFactory)
+  def props(messageStreamFactory: (ActorRef, ActorRefFactory) => ActorRef,
+    socketEndpointFactory: (ActorRef, ActorRefFactory, Option[String]) => ActorRef) =
+    Props(classOf[Supervisor], messageStreamFactory, socketEndpointFactory)
 
 }
 
-class Supervisor(messageStream: ActorRef,
-    socketEndpointFactory: (Props, ActorRefFactory, Option[String]) => ActorRef) extends Actor {
+class Supervisor(messageStreamFactory: (ActorRef, ActorRefFactory) => ActorRef,
+    socketEndpointFactory: (ActorRef, ActorRefFactory, Option[String]) => ActorRef) extends Actor {
 
   import Supervisor._
 
   val log = Logging(context.system, this)
+
+  val messageStream = messageStreamFactory(self, context.system)
 
   var sockets = ParSet[ActorRef]()
 
@@ -35,7 +37,7 @@ class Supervisor(messageStream: ActorRef,
 
     case m @ NewSocket(name: Option[String]) => {
 
-      val newSocket: ActorRef = socketEndpointFactory(SocketEndpoint.props(supervisor = self), context.system, name)
+      val newSocket: ActorRef = socketEndpointFactory(self, context.system, name)
 
       newSocket forward m
 
