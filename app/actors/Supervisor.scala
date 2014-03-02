@@ -30,8 +30,8 @@ object Supervisor {
  * @param messageStream a factory funtction to create MessageStream actors.
  * The funciton accepts a reference to it's supervisor
  */
-class Supervisor(messageStreamFactory: (ActorRef, ActorRefFactory) => ActorRef,
-    socketEndpointFactory: (ActorRef, ActorRefFactory, Option[String]) => ActorRef) extends Actor {
+class Supervisor(messageStreamFactory: MessageStreamFactory,
+    socketEndpointFactory: SocketEndpointFactory) extends Actor {
 
   import Supervisor._
 
