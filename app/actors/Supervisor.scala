@@ -10,18 +10,26 @@ import akka.event.{ EventStream, Logging, LoggingReceive }
 
 import scala.collection.parallel.ParSet
 
+import actors.MessageStream.MessageStreamFactory
+import actors.SocketEndpoint.SocketEndpointFactory
+
 object Supervisor {
 
   case class NewSocket(name: Option[String] = None)
 
   case class SocketClosed(closedSocket: ActorRef)
 
-  def props(messageStreamFactory: (ActorRef, ActorRefFactory) => ActorRef,
-    socketEndpointFactory: (ActorRef, ActorRefFactory, Option[String]) => ActorRef) =
+  def props(messageStreamFactory: MessageStreamFactory,
+    socketEndpointFactory: SocketEndpointFactory) =
     Props(classOf[Supervisor], messageStreamFactory, socketEndpointFactory)
 
 }
 
+/**
+ * Supervisor that will route messages between the MessageStream and SocketEndpoints
+ * @param messageStream a factory funtction to create MessageStream actors.
+ * The funciton accepts a reference to it's supervisor
+ */
 class Supervisor(messageStreamFactory: (ActorRef, ActorRefFactory) => ActorRef,
     socketEndpointFactory: (ActorRef, ActorRefFactory, Option[String]) => ActorRef) extends Actor {
 

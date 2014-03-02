@@ -4,7 +4,7 @@ import play.api.libs.ws.WS
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
-import akka.actor.{ Props, ActorRef, Actor }
+import akka.actor.{ Props, ActorRef, Actor, ActorRefFactory }
 import akka.event.{ EventStream, Logging, LoggingReceive }
 
 import scala.concurrent.duration._
@@ -15,6 +15,14 @@ trait MessageStream
 object MessageStream {
 
   type Message = String
+
+  /**
+   * Creates a MessageStream.
+   * ActorRef: reference to the supervisor actor
+   * ActorRefFactory: the resulting parent context of the retured Actor
+   * @return a MessageStream ActorRef
+   */
+  type MessageStreamFactory = (ActorRef, ActorRefFactory) => ActorRef
 
   case class NewMessage(message: Message)
 
@@ -41,6 +49,16 @@ object OfflineMessageStream {
       maxMilliseconds)
 
 }
+
+/**
+ * A message stream that is provided messages to stream.
+ * Wlll generate messages at a random interval between minMilliseconds and maxMilliseconds
+ * @constructor create a new OfflineMessageStream
+ * @param supervisor the superivsing actor that should receive the messages
+ * @param messageList the predifned list of messages to be streamed
+ * @param minMilliseconds lower bound for time between messages
+ * @param maxMilliseconds upper bound for time between messages
+ */
 
 class OfflineMessageStream(
     supervisor: ActorRef,
