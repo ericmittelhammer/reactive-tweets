@@ -6,10 +6,11 @@ import com.typesafe.config.ConfigFactory
 
 import akka.actor.{ Actor, ActorRef, ActorRefFactory, ActorSystem, Props }
 import akka.pattern.{ ask }
-import akka.testkit.{ TestKit, TestProbe, ImplicitSender, DefaultTimeout }
+import akka.testkit.{ TestKit, TestActor, TestActorRef, TestProbe, ImplicitSender, DefaultTimeout }
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.collection.parallel.ParSet
 
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -48,6 +49,19 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       messageStream.expectMsg(MessageStream.StartStream())
     }
 
+    "Forward a NewSocket message to a created SocketEndpoint" in {
+
+      val messageStream = TestProbe()
+      val socket1 = TestProbe()
+      val i = List(socket1).iterator
+      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+
+      val supervisor = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor2")
+
+      supervisor ! Supervisor.NewSocket()
+      socket1.expectMsg(Supervisor.NewSocket())
+    }
+
     "send each of its subscribed sockets a NewMessage" in {
 
       val messageStream = TestProbe()
@@ -56,12 +70,16 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       val i = List(socket1, socket2).iterator
       def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
 
-      val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor2")
+      val supervisorRef = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor3")
 
-      supervisor ! Supervisor.NewSocket()
-      supervisor ! Supervisor.NewSocket()
-      supervisor ! MessageStream.NewMessage("hello")
+      val supervisor: Supervisor = supervisorRef.underlyingActor
+
+      supervisor.sockets = ParSet(socket1.ref, socket2.ref)
+
+      supervisorRef ! MessageStream.NewMessage("hello")
+
       socket1.expectMsg(MessageStream.NewMessage("hello"))
+
       socket2.expectMsg(MessageStream.NewMessage("hello"))
     }
 
@@ -73,13 +91,18 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       val i = List(socket1, socket2).iterator
       def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
 
-      val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor3")
+      val supervisorRef = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor4")
 
-      supervisor ! Supervisor.NewSocket()
-      supervisor ! Supervisor.NewSocket()
+      val supervisor: Supervisor = supervisorRef.underlyingActor
 
-      supervisor ! Supervisor.SocketClosed(socket1.ref)
-      supervisor ! Supervisor.SocketClosed(socket2.ref)
+      supervisor.sockets = ParSet(socket1.ref, socket2.ref)
+
+      supervisorRef ! Supervisor.SocketClosed(socket1.ref)
+
+      messageStream.expectNoMsg
+
+      supervisorRef ! Supervisor.SocketClosed(socket2.ref)
+
       messageStream.expectMsg(MessageStream.StopStream())
     }
   }
