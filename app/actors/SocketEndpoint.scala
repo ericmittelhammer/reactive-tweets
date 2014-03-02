@@ -28,7 +28,7 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   def receive = {
 
-    case Supervisor.NewSocket() => {
+    case Supervisor.NewSocket(name: Option[String]) => {
 
       // create the iteratee that will handle incoming data from the websocket 
       in = Iteratee.foreach[JsValue] { msg =>
@@ -59,6 +59,6 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
     case SocketEndpoint.NewMessage(message: MessageStream.Message) =>
       out = out >>> Enumerator(message)
 
-    case Supervisor.NewSocket() => log.warning("already connected")
+    case Supervisor.NewSocket(name: Option[String]) => log.warning("already connected")
   }
 }

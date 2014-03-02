@@ -12,18 +12,18 @@ import scala.collection.parallel.ParSet
 
 object Supervisor {
 
-  case class NewSocket()
+  case class NewSocket(name: Option[String] = None)
 
   case class SocketClosed(closedSocket: ActorRef)
 
   def props(messageStream: ActorRef,
-    socketEndpointFactory: ActorRefFactory => ActorRef) =
+    socketEndpointFactory: (Props, ActorRefFactory, Option[String]) => ActorRef) =
     Props(classOf[Supervisor], messageStream, socketEndpointFactory)
 
 }
 
 class Supervisor(messageStream: ActorRef,
-    socketEndpointFactory: ActorRefFactory => ActorRef) extends Actor {
+    socketEndpointFactory: (Props, ActorRefFactory, Option[String]) => ActorRef) extends Actor {
 
   import Supervisor._
 
@@ -33,17 +33,32 @@ class Supervisor(messageStream: ActorRef,
 
   def receive = LoggingReceive {
 
-    case m @ NewSocket() => {
-      val newSocket: ActorRef = socketEndpointFactory(context.system)
+    case m @ NewSocket(name: Option[String]) => {
+
+      val newSocket: ActorRef = socketEndpointFactory(SocketEndpoint.props(supervisor = self), context.system, name)
+
       newSocket forward m
+
       sockets = sockets + newSocket
-      if (sockets.size == 1) messageStream ! MessageStream.StartStream()
+
+      log.info(s"connected socket: ${newSocket.path}")
+
+      if (sockets.size == 1) {
+        log.info("starting message stream")
+        messageStream ! MessageStream.StartStream()
+      }
     }
 
     case SocketClosed(closedSocket: ActorRef) => {
+
       sockets = sockets - closedSocket
-      //messageStream ! MessageStream.Unsubscribe(closedSocket)
-      if (sockets.size == 0) messageStream ! MessageStream.StopStream()
+
+      log.info(s"closed socket: ${closedSocket.path}")
+
+      if (sockets.size == 0) {
+        log.info("no connected sockets, shutting down message stream")
+        messageStream ! MessageStream.StopStream()
+      }
     }
 
     case m @ MessageStream.NewMessage(message: MessageStream.Message) => {

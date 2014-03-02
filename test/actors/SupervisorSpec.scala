@@ -41,7 +41,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
     "send the message stream a StartStream message when its first socket is added" in {
 
       val messageStream = TestProbe()
-      def socketEndpointFactory(a: ActorRefFactory): ActorRef = TestProbe().ref
+      def socketEndpointFactory(p: Props, a: ActorRefFactory, n: Option[String]): ActorRef = TestProbe().ref
 
       val supervisor = system.actorOf(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor")
 
@@ -54,7 +54,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       val messageStream = TestProbe()
       val socket1 = TestProbe()
       val i = List(socket1).iterator
-      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+      def socketEndpointFactory(p: Props, a: ActorRefFactory, n: Option[String]): ActorRef = i.next().ref
 
       val supervisor = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor2")
 
@@ -68,7 +68,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       val socket1 = TestProbe()
       val socket2 = TestProbe()
       val i = List(socket1, socket2).iterator
-      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+      def socketEndpointFactory(p: Props, a: ActorRefFactory, n: Option[String]): ActorRef = i.next().ref
 
       val supervisorRef = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor3")
 
@@ -89,7 +89,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
       val socket1 = TestProbe()
       val socket2 = TestProbe()
       val i = List(socket1, socket2).iterator
-      def socketEndpointFactory(a: ActorRefFactory): ActorRef = i.next().ref
+      def socketEndpointFactory(p: Props, a: ActorRefFactory, n: Option[String]): ActorRef = i.next().ref
 
       val supervisorRef = TestActorRef(Supervisor.props(messageStream.ref, socketEndpointFactory), "supervisor4")
 
