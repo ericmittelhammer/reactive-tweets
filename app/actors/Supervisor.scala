@@ -71,7 +71,7 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
       }
     }
 
-    case m @ MessageStream.NewMessage(message: MessageStream.Message) => {
+    case m @ SocketEndpoint.NewMessage(message: MessageStream.Message) => {
       sockets foreach (_ forward m)
     }
 

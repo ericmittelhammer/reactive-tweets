@@ -48,15 +48,17 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
       // explicitly initializing it
       socketActor.context.become(socketActor.connected)
 
-      // send a message to the socket
-      socket ! SocketEndpoint.NewMessage("hello")
-
       // create an iteratee to get the input out of the enumerator
       val i = Iteratee.fold(List[String]()) { (list, nextString: String) =>
         list :+ nextString
       }
 
       val f = socketActor.out.run(i)
+
+      // send a message to the socket
+      socket ! SocketEndpoint.NewMessage("hello")
+
+      socketActor.channel.end
 
       // verify the message was processed by the iteratee
       whenReady(f) { result =>
@@ -76,7 +78,7 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
       whenReady(f) { result =>
 
         // pass an EOF message through the returned iteratee,
-        // simulated a disconnected websocket
+        // simulating a disconnected websocket
         Enumerator.eof.run(result._1)
 
         expectMsg(Supervisor.SocketClosed(socket))
@@ -102,7 +104,7 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
         // send a Json message to the iterator
         Enumerator[JsValue](msg).run(result._1)
 
-        expectMsg(MessageStream.NewMessage("here's the payload"))
+        expectMsg(SocketEndpoint.NewMessage("here's the payload"))
       }
 
     }

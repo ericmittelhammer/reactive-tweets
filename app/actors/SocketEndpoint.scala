@@ -1,12 +1,12 @@
 package actors
 
-import play.api.libs.iteratee.{ Iteratee, Enumerator }
+import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
 import play.api.libs.json.{ JsValue, JsString }
 
 import akka.actor.{ Props, ActorRef, Actor, ActorRefFactory }
-import akka.event.Logging
+import akka.event.{ Logging, LoggingReceive }
 
 object SocketEndpoint {
 
@@ -36,20 +36,20 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   val log = Logging(context.system, this)
 
-  var out: Enumerator[MessageStream.Message] = Enumerator.empty
+  val (out, channel) = Concurrent.broadcast[JsString]
 
   var in: Iteratee[JsValue, Unit] = _
 
   var filterString: Option[String] = None
 
-  def receive = {
+  def receive = LoggingReceive {
 
     case Supervisor.NewSocket(name: Option[String]) => {
 
       // create the iteratee that will handle incoming data from the websocket 
       in = Iteratee.foreach[JsValue] { msg =>
         msg \ "messageType" match {
-          case JsString("newMessage") => supervisor ! MessageStream.NewMessage((msg \ "payload").as[String])
+          case JsString("newMessage") => supervisor ! SocketEndpoint.NewMessage((msg \ "payload").as[String])
           case JsString("filter") => filterString = Some((msg \ "value").as[String])
           case _ => Unit
         }
@@ -70,10 +70,9 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   }
 
-  def connected: Receive = {
+  def connected: Receive = LoggingReceive {
 
-    case SocketEndpoint.NewMessage(message: MessageStream.Message) =>
-      out = out >>> Enumerator(message)
+    case SocketEndpoint.NewMessage(message: MessageStream.Message) => channel.push(JsString(message))
 
     case Supervisor.NewSocket(name: Option[String]) => log.warning("already connected")
   }

@@ -44,7 +44,7 @@ class OfflineMessageStreamSpec extends TestKit(ActorSystem("OMSSystem",
   "an started OfflineMessageStream Actor" should {
     "publish a message within 3 seconds" in {
       oms ! MessageStream.StartStream()
-      expectMsgAllClassOf(3000 milliseconds, classOf[MessageStream.NewMessage])
+      expectMsgAllClassOf(3000 milliseconds, classOf[SocketEndpoint.NewMessage])
     }
   }
 
