@@ -1,6 +1,7 @@
 package actors
 
 import play.api.libs.ws.WS
+import play.api.libs.json.JsValue
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -14,7 +15,7 @@ trait MessageStream
 
 object MessageStream {
 
-  type Message = String
+  type Message = JsValue
 
   /**
    * Creates a MessageStream.
@@ -24,9 +25,9 @@ object MessageStream {
    */
   type MessageStreamFactory = (ActorRef, ActorRefFactory) => ActorRef
 
-  case class StopStream()
+  case object StopStream
 
-  case class StartStream()
+  case object StartStream
 
   //def props(messages: List[MessageStream.Message]) = Props(classOf[MessageStream], messages)
 
@@ -45,6 +46,8 @@ object OfflineMessageStream {
       messageList,
       minMilliseconds,
       maxMilliseconds)
+
+  case object NextMessage
 
 }
 
@@ -73,29 +76,30 @@ class OfflineMessageStream(
   var i = messageList.iterator
 
   def stopped: Receive = LoggingReceive {
-    case StartStream() => {
+    case StartStream => {
       log.info("Stream Started")
       context.become(started)
-      self ! SocketEndpoint.NewMessage(i.next) //send the first message to myself
+      self ! OfflineMessageStream.NextMessage //send the first message to myself
     }
-    case StopStream() => log.warning("Stream already stopped")
+    case StopStream => log.warning("Stream already stopped")
     case SocketEndpoint.NewMessage(message: Message) =>
-      log.warning("Trying to brodcast to a stopped stream")
+      log.warning("Stream already stopped")
   }
 
   def started: Receive = LoggingReceive {
-    case StartStream() => log.warning("Stream already started")
+    case StartStream => log.warning("Stream already started")
     case StopStream => context.become(stopped)
-    case SocketEndpoint.NewMessage(message: Message) => {
+    case OfflineMessageStream.NextMessage => {
       // reset the iterator if we've reached the end of the list
       if (!i.hasNext) i = messageList.iterator
-      supervisor ! SocketEndpoint.NewMessage(message) //send the message to the supervisor
+      val nextMsg = i.next
+      supervisor ! SocketEndpoint.NewMessage(nextMsg) //send the message to the supervisor
       val nextMessageAt =
         scala.util.Random.nextInt(
           (maxMilliseconds - minMilliseconds) + 1) + minMilliseconds
       context.system.scheduler.scheduleOnce(nextMessageAt milliseconds) {
         //schedule the next message to be sent 
-        self ! SocketEndpoint.NewMessage(i.next)
+        self ! OfflineMessageStream.NextMessage
       }
     }
   }

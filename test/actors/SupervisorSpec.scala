@@ -12,6 +12,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.collection.parallel.ParSet
 
+import play.api.libs.json.JsString
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -50,7 +51,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
 
       supervisor ! Supervisor.NewSocket()
 
-      messageStream.expectMsg(MessageStream.StartStream())
+      messageStream.expectMsg(MessageStream.StartStream)
     }
 
     "Forward a NewSocket message to a created SocketEndpoint" in {
@@ -87,11 +88,11 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
 
       supervisor.sockets = ParSet(socket1.ref, socket2.ref)
 
-      supervisorRef ! SocketEndpoint.NewMessage("hello")
+      supervisorRef ! SocketEndpoint.NewMessage(JsString("hello"))
 
-      socket1.expectMsg(SocketEndpoint.NewMessage("hello"))
+      socket1.expectMsg(SocketEndpoint.NewMessage(JsString("hello")))
 
-      socket2.expectMsg(SocketEndpoint.NewMessage("hello"))
+      socket2.expectMsg(SocketEndpoint.NewMessage(JsString("hello")))
     }
 
     "send a StopStream message when its final socket has been closed" in {
@@ -117,7 +118,7 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
 
       supervisorRef ! Supervisor.SocketClosed(socket2.ref)
 
-      messageStream.expectMsg(MessageStream.StopStream())
+      messageStream.expectMsg(MessageStream.StopStream)
     }
   }
 

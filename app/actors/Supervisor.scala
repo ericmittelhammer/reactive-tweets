@@ -55,7 +55,7 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
       if (sockets.size == 1) {
         log.info("starting message stream")
-        messageStream ! MessageStream.StartStream()
+        messageStream ! MessageStream.StartStream
       }
     }
 
@@ -67,7 +67,7 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
       if (sockets.size == 0) {
         log.info("no connected sockets, shutting down message stream")
-        messageStream ! MessageStream.StopStream()
+        messageStream ! MessageStream.StopStream
       }
     }
 

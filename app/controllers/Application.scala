@@ -4,7 +4,7 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ JsValue, JsString }
 import play.api.libs.iteratee.{ Iteratee, Enumerator }
 
 import akka.actor.{ Actor, Props, ActorSystem, ActorRef, ActorRefFactory }
@@ -25,7 +25,7 @@ object Application extends Controller {
   val actorSystem = ActorSystem("reactive")
 
   val messageStreamFactory = (s: ActorRef, context: ActorRefFactory) => {
-    val props = OfflineMessageStream.props(s, List("one", "two", "three"), 1000, 500)
+    val props = OfflineMessageStream.props(s, List(JsString("one"), JsString("two"), JsString("three")), 500, 1000)
     context.actorOf(props, "OfflineMessageStream")
   }
 
@@ -47,7 +47,7 @@ object Application extends Controller {
     }
   }
 
-  val supervisor = actorSystem.actorOf(Supervisor.props(noOpMessageStreamFactory, socketEndpointFactory), "supervisor")
+  val supervisor = actorSystem.actorOf(Supervisor.props(messageStreamFactory, socketEndpointFactory), "supervisor")
 
   def index = Action {
     Ok(views.html.index("Your new application is ready."))

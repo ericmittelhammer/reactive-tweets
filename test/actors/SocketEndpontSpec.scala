@@ -12,7 +12,7 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-import play.api.libs.json.{ Json, JsValue }
+import play.api.libs.json.{ Json, JsValue, JsString }
 import play.api.libs.iteratee.{ Iteratee, Enumerator, Input, Concurrent }
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -49,20 +49,20 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
       socketActor.context.become(socketActor.connected)
 
       // create an iteratee to get the input out of the enumerator
-      val i = Iteratee.fold(List[String]()) { (list, nextString: String) =>
-        list :+ nextString
+      val i = Iteratee.fold(List[JsValue]()) { (list, nextValue: JsValue) =>
+        list :+ nextValue
       }
 
       val f = socketActor.out.run(i)
 
       // send a message to the socket
-      socket ! SocketEndpoint.NewMessage("hello")
+      socket ! SocketEndpoint.NewMessage(JsString("hello"))
 
       socketActor.channel.end
 
       // verify the message was processed by the iteratee
       whenReady(f) { result =>
-        result should equal(List("hello"))
+        result should equal(List(JsString("hello")))
       }
 
     }
@@ -104,7 +104,7 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
         // send a Json message to the iterator
         Enumerator[JsValue](msg).run(result._1)
 
-        expectMsg(SocketEndpoint.NewMessage("here's the payload"))
+        expectMsg(SocketEndpoint.NewMessage(JsString("here's the payload")))
       }
 
     }

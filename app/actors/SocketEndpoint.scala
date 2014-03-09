@@ -36,7 +36,7 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   val log = Logging(context.system, this)
 
-  val (out, channel) = Concurrent.broadcast[JsString]
+  val (out, channel) = Concurrent.broadcast[JsValue]
 
   var in: Iteratee[JsValue, Unit] = _
 
@@ -49,7 +49,7 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
       // create the iteratee that will handle incoming data from the websocket 
       in = Iteratee.foreach[JsValue] { msg =>
         msg \ "messageType" match {
-          case JsString("newMessage") => supervisor ! SocketEndpoint.NewMessage((msg \ "payload").as[String])
+          case JsString("newMessage") => supervisor ! SocketEndpoint.NewMessage((msg \ "payload").as[JsValue])
           case JsString("filter") => filterString = Some((msg \ "value").as[String])
           case _ => Unit
         }
@@ -72,7 +72,7 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   def connected: Receive = LoggingReceive {
 
-    case SocketEndpoint.NewMessage(message: MessageStream.Message) => channel.push(JsString(message))
+    case SocketEndpoint.NewMessage(message: MessageStream.Message) => channel.push(message)
 
     case Supervisor.NewSocket(name: Option[String]) => log.warning("already connected")
   }
