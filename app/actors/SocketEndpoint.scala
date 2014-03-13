@@ -53,7 +53,7 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
           case JsString("filter") => filterString = Some((msg \ "value").as[String])
           case _ => Unit
         }
-      }.map { _ => // this will map over the Iteratee once it has recieved EOF
+      }.map { _ => // this will map over the Iteratee once it has received EOF
         supervisor ! Supervisor.SocketClosed(self)
       }
 
