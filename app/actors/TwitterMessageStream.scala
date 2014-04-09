@@ -11,18 +11,18 @@ import akka.event.{ EventStream, Logging, LoggingReceive }
 
 import scala.concurrent.duration._
 
-object TwitterMessageStream{
+/*object TwitterMessageStream {
 
   def tweetToMessage(tweet: JsObject): JsObject = {
-    
+
   }
 
 }
 
 class TwitterMessageStream(
-    supervisor: ActorRef, 
-    url: String, 
-    consumerKey: String, 
+    supervisor: ActorRef,
+    url: String,
+    consumerKey: String,
     accessToken: String) extends Actor with MessageStream {
 
   val req = WS.url(url).withRequestTimeout(-1).sign(OAuthCalculator(consumerKey, accessToken))
@@ -30,32 +30,34 @@ class TwitterMessageStream(
   // iteratee that is used to turn the streaming API
   // into individual messages
 
-  val iteratee = Iteratee.foreach[Array[Byte]] { chunk => {
-      
-      val chunkedString = new String(chunk, "UTF-8")
+  val iteratee = Iteratee.foreach[Array[Byte]] { chunk =>
 
-      val json = Json.parse(chunkedString)
-      (json \ "id_str").asOpt[String].map { id => WS.url(elasticTweetURL + id).put(json) }
-      matchAndPush(json)
+    val chunkedString = new String(chunk, "UTF-8")
+
+    val json = Json.parse(chunkedString)
+
+    json.asOpt[String].map { tweet =>
+      supervisor ! SocketEndpoint.NewMessage(tweetToMessage(tweet))
     }
   }
 
   val log = Logging(context.system, this)
 
   def stopped: Receive = {
-    
+
     case StartStream => {
-      log.info("Stream Started")
+      log.info("TwitterStream Started")
       context.become(started)
     }
 
     case StopStream => log.warning("Stream already stopped")
   }
 
-    def started: Receive = LoggingReceive {
+  def started: Receive = {
     case StartStream => log.warning("Stream already started")
     case StopStream => context.become(stopped)
+  }
 
   override def receive = stopped
 
-}
+}*/

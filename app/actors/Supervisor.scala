@@ -27,7 +27,7 @@ object Supervisor {
 
 /**
  * Supervisor that will route messages between the MessageStream and SocketEndpoints
- * @param messageStream a factory funtction to create MessageStream actors.
+ * @param messageStream a factory function to create MessageStream actors.
  * The funciton accepts a reference to it's supervisor
  */
 class Supervisor(messageStreamFactory: MessageStreamFactory,

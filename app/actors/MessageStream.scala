@@ -7,7 +7,7 @@ trait MessageStream
 
 object MessageStream {
 
-  type Message = JsValue
+  case class Message(timestamp: java.util.Date, author: String, message: String)
 
   /**
    * Creates a MessageStream.

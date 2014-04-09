@@ -88,11 +88,13 @@ class SupervisorSpec extends TestKit(ActorSystem("SupervisorSystem",
 
       supervisor.sockets = ParSet(socket1.ref, socket2.ref)
 
-      supervisorRef ! SocketEndpoint.NewMessage(JsString("hello"))
+      val msg = MessageStream.Message(timestamp = new java.util.Date(), author = "Author1", message = "Hello")
 
-      socket1.expectMsg(SocketEndpoint.NewMessage(JsString("hello")))
+      supervisorRef ! SocketEndpoint.NewMessage(msg)
 
-      socket2.expectMsg(SocketEndpoint.NewMessage(JsString("hello")))
+      socket1.expectMsg(SocketEndpoint.NewMessage(msg))
+
+      socket2.expectMsg(SocketEndpoint.NewMessage(msg))
     }
 
     "send a StopStream message when its final socket has been closed" in {

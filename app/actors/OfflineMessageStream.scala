@@ -68,7 +68,8 @@ class OfflineMessageStream(
       // reset the iterator if we've reached the end of the list
       if (!i.hasNext) i = messageList.iterator
       val nextMsg = i.next
-      supervisor ! SocketEndpoint.NewMessage(nextMsg) //send the message to the supervisor
+      //send the message to the supervisor
+      supervisor ! SocketEndpoint.NewMessage(nextMsg.copy(timestamp = new java.util.Date()))
       val nextMessageAt =
         scala.util.Random.nextInt(
           (maxMilliseconds - minMilliseconds) + 1) + minMilliseconds

@@ -34,7 +34,13 @@ class OfflineMessageStreamSpec extends TestKit(ActorSystem("OMSSystem",
     shutdown(system)
   }
 
-  val oms = system.actorOf(OfflineMessageStream.props(self, List(JsString("one"), JsString("two"), JsString("three")), 50, 3000), "oms")
+  val testMessages = List(
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author1", message = "Message1"),
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author2", message = "Message2"),
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author3", message = "Message3")
+  )
+
+  val oms = system.actorOf(OfflineMessageStream.props(self, testMessages, 50, 3000), "oms")
 
   "an unstarted OfflineMessageStream Actor" should {
     "not publish any messages" in {

@@ -24,8 +24,14 @@ object Application extends Controller {
 
   val actorSystem = ActorSystem("reactive")
 
+  val testMessages = List(
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author1", message = "Message1"),
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author2", message = "Message2"),
+    MessageStream.Message(timestamp = new java.util.Date(), author = "Author3", message = "Message3")
+  )
+
   val messageStreamFactory = (s: ActorRef, context: ActorRefFactory) => {
-    val props = OfflineMessageStream.props(s, List(JsString("one"), JsString("two"), JsString("three")), 500, 1000)
+    val props = OfflineMessageStream.props(s, testMessages, 500, 1000)
     context.actorOf(props, "OfflineMessageStream")
   }
 

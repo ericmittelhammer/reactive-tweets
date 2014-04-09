@@ -55,14 +55,16 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
 
       val f = socketActor.out.run(i)
 
+      val msg = MessageStream.Message(timestamp = new java.util.Date(), author = "Author1", message = "Hello")
+
       // send a message to the socket
-      socket ! SocketEndpoint.NewMessage(JsString("hello"))
+      socket ! SocketEndpoint.NewMessage(msg)
 
       socketActor.channel.end
 
       // verify the message was processed by the iteratee
       whenReady(f) { result =>
-        result should equal(List(JsString("hello")))
+        result should equal(List(SocketEndpoint.messageWrites.writes(msg)))
       }
 
     }
@@ -96,7 +98,7 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
 
       val msg = Json.obj(
         "messageType" -> "newMessage",
-        "payload" -> "here's the payload"
+        "payload" -> Json.obj("author" -> "testAuthor", "message" -> "hello")
       )
 
       whenReady(f) { result =>
@@ -104,7 +106,11 @@ class SocketEndpointSpec extends TestKit(ActorSystem("SocketEndpointSystem",
         // send a Json message to the iterator
         Enumerator[JsValue](msg).run(result._1)
 
-        expectMsg(SocketEndpoint.NewMessage(JsString("here's the payload")))
+        // validate that it was parsed and then sent as a message
+        // we have to use a partial function here because the timestamp will be set by the SocketEndpoint
+        expectMsgPF() {
+          case m: SocketEndpoint.NewMessage if (m.message.author == "testAuthor" && m.message.message == "hello") => true
+        }
       }
 
     }
