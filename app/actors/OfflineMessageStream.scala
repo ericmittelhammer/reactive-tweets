@@ -14,7 +14,7 @@ object OfflineMessageStream {
     supervisor: ActorRef,
     messageList: List[MessageStream.Message],
     minMilliseconds: Int,
-    maxMilliseconds: Int) =
+    maxMilliseconds: Int): Props =
     Props(
       classOf[OfflineMessageStream],
       supervisor,
@@ -74,12 +74,12 @@ class OfflineMessageStream(
         scala.util.Random.nextInt(
           (maxMilliseconds - minMilliseconds) + 1) + minMilliseconds
       context.system.scheduler.scheduleOnce(nextMessageAt milliseconds) {
-        //schedule the next message to be sent 
+        //schedule the next message to be sent
         self ! OfflineMessageStream.NextMessage
       }
     }
   }
 
-  override def receive = stopped
+  override def receive: Receive = stopped
 
 }

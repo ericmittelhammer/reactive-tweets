@@ -20,15 +20,15 @@ object Supervisor {
   case class SocketClosed(closedSocket: ActorRef)
 
   def props(messageStreamFactory: MessageStreamFactory,
-    socketEndpointFactory: SocketEndpointFactory) =
+    socketEndpointFactory: SocketEndpointFactory): Props =
     Props(classOf[Supervisor], messageStreamFactory, socketEndpointFactory)
 
 }
 
 /**
  * Supervisor that will route messages between the MessageStream and SocketEndpoints
- * @param messageStream a factory function to create MessageStream actors.
- * The funciton accepts a reference to it's supervisor
+ * @param messageStreamFactory a factory function usedto create MessageStream actors.
+ * @param socketEndpointFactory a factory function used to create SocketEndpint actors.
  */
 class Supervisor(messageStreamFactory: MessageStreamFactory,
     socketEndpointFactory: SocketEndpointFactory) extends Actor {
@@ -41,7 +41,7 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
   var sockets = ParSet[ActorRef]()
 
-  def receive = LoggingReceive {
+  def receive: Receive = LoggingReceive {
 
     case m @ NewSocket(name: Option[String]) => {
 

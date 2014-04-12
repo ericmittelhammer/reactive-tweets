@@ -27,7 +27,7 @@ object SocketEndpoint {
 
   case class NewMessage(message: MessageStream.Message)
 
-  def props(supervisor: ActorRef) = Props(classOf[SocketEndpoint], supervisor)
+  def props(supervisor: ActorRef): Props = Props(classOf[SocketEndpoint], supervisor)
 
   // used to convert from raw json coming from the socket into the message type
   val inputReads: Reads[MessageStream.Message] = (
@@ -66,18 +66,18 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   var filterString: Option[String] = None
 
-  def receive = LoggingReceive {
+  def receive: Receive = LoggingReceive {
 
     case Supervisor.NewSocket(name: Option[String]) => {
 
-      // create the iteratee that will handle incoming data from the websocket 
+      // create the iteratee that will handle incoming data from the websocket
       var in: Iteratee[JsValue, Unit] = Iteratee.foreach[JsValue] { msg =>
 
         msg \ "messageType" match {
 
           case JsString("newMessage") =>
 
-            //try to parse the json into a Message 
+            //try to parse the json into a Message
             inputToMessageResult((msg \ "payload").as[JsValue]) match {
 
               // if it validates, send the message to the supervisor
