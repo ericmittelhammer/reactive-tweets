@@ -11,14 +11,23 @@ import akka.event.{ EventStream, Logging, LoggingReceive }
 
 import scala.concurrent.duration._
 
-/*object TwitterMessageStream {
+object TwitterMessageStream {
 
-  def tweetToMessage(tweet: JsObject): JsObject = {
+  def tweetToMessage(tweet: JsObject): MessageStream.Message = {
 
   }
 
 }
 
+/**
+ * Actor that will connect to the Twitter stream and handle incoming messages;
+ * parsing and tranforming them before sending them to the supervisor for
+ * broadcasting.
+ * @prarm supervisor reference to the supervisor
+ * @param url url of the twitter stream to connect to
+ * @param consumerKey used for Twitter OAuth
+ * @param accessToken used for Twitter OAuth
+ */
 class TwitterMessageStream(
     supervisor: ActorRef,
     url: String,
@@ -27,9 +36,8 @@ class TwitterMessageStream(
 
   val req = WS.url(url).withRequestTimeout(-1).sign(OAuthCalculator(consumerKey, accessToken))
 
-  // iteratee that is used to turn the streaming API
+  // iteratee that is used to turn the raw json from the streaming API
   // into individual messages
-
   val iteratee = Iteratee.foreach[Array[Byte]] { chunk =>
 
     val chunkedString = new String(chunk, "UTF-8")
@@ -58,6 +66,6 @@ class TwitterMessageStream(
     case StopStream => context.become(stopped)
   }
 
-  override def receive = stopped
+  override def receive: Receive = stopped
 
-}*/
+}
