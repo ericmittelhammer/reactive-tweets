@@ -23,29 +23,12 @@ object SocketEndpoint {
    * Option[String]: An optional name to be used in locating the socket
    * @return a SocketEndPoint ActorRef
    */
-  type SocketEndpointFactory = (ActorRef, ActorRefFactory, Option[String]) => ActorRef
+  type SocketEndpointFactory = (ActorRefFactory, ActorRef, String) => ActorRef
 
   case class NewMessage(message: MessageStream.Message)
 
-  def props(supervisor: ActorRef): Props = Props(classOf[SocketEndpoint], supervisor)
+  def props(supervisor: ActorRef, name: String): Props = Props(classOf[SocketEndpoint], supervisor, name)
 
-  // used to convert from raw json coming from the socket into the message type
-  val inputReads: Reads[MessageStream.Message] = (
-    (JsPath \ "author").read[String] and
-    (JsPath \ "message").read[String]
-  //partially apply the case class apply function with the current timestamp
-  )(MessageStream.Message.apply(new java.util.Date(), _: String, _: String))
-
-  def inputToMessageResult(payload: JsValue): JsResult[MessageStream.Message] =
-    payload.validate[MessageStream.Message](inputReads)
-
-  // will convert a message back to json to be written to the stream
-  val messageWrites: Writes[MessageStream.Message] = (
-    // write the timestamp out in RFC2822 time
-    (JsPath \ "timestamp").write[Date](Writes.dateWrites("EEE, d MMM yyyy HH:mm:ss Z")) and
-    (JsPath \ "author").write[String] and
-    (JsPath \ "message").write[String]
-  )(unlift(MessageStream.Message.unapply))
 }
 
 /**
@@ -53,9 +36,10 @@ object SocketEndpoint {
  * Sending a [[Supervisor.NewSocket]] message will create the in/out
  * Iteratee and Enumerator and reply to sender with them.
  * @constructor create a new SocketEndpoint with a reference to the supervisor actor
- * @param supervisor a referne to the supervisor
+ * @param supervisor a reference to the supervisor
+ * @name the name of the user bound to this socket
  */
-class SocketEndpoint(supervisor: ActorRef) extends Actor {
+class SocketEndpoint(supervisor: ActorRef, name: String) extends Actor {
 
   import SocketEndpoint._
 
@@ -66,24 +50,27 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
 
   var filterString: Option[String] = None
 
+  // will convert a message back to json to be written to the stream
+  val messageWrites: Writes[MessageStream.Message] = (
+    // write the timestamp out in RFC2822 time
+    (JsPath \ "timestamp").write[Date](Writes.dateWrites("EEE, d MMM yyyy HH:mm:ss Z")) and
+    (JsPath \ "author").write[String] and
+    (JsPath \ "message").write[String]
+  )(unlift(MessageStream.Message.unapply))
+
   def receive: Receive = LoggingReceive {
 
-    case Supervisor.NewSocket(name: Option[String]) => {
+    case Supervisor.NewSocket(name: String) => {
 
       // create the iteratee that will handle incoming data from the websocket
       var in: Iteratee[JsValue, Unit] = Iteratee.foreach[JsValue] { msg =>
 
         msg \ "messageType" match {
 
-          case JsString("newMessage") =>
-
-            //try to parse the json into a Message
-            inputToMessageResult((msg \ "payload").as[JsValue]) match {
-
-              // if it validates, send the message to the supervisor
-              case s: JsSuccess[MessageStream.Message] => supervisor ! SocketEndpoint.NewMessage(s.get)
-              case e: JsError => // if there was a parsing error, do nothing
-            }
+          case JsString("newMessage") => {
+            val message = MessageStream.Message(new java.util.Date, name, (msg \ "payload" \ "message").as[String])
+            supervisor ! SocketEndpoint.NewMessage(message)
+          }
 
           case JsString("filter") => filterString = Some((msg \ "value").as[String])
 
@@ -113,6 +100,6 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
     case SocketEndpoint.NewMessage(message: MessageStream.Message) =>
       channel.push(messageWrites.writes(message))
 
-    case Supervisor.NewSocket(name: Option[String]) => log.warning("already connected")
+    case Supervisor.NewSocket(name: String) => log.warning("already connected")
   }
 }

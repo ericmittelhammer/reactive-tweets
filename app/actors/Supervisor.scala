@@ -15,7 +15,7 @@ import actors.SocketEndpoint.SocketEndpointFactory
 
 object Supervisor {
 
-  case class NewSocket(name: Option[String] = None)
+  case class NewSocket(name: String)
 
   case class SocketClosed(closedSocket: ActorRef)
 
@@ -43,9 +43,9 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
   def receive: Receive = LoggingReceive {
 
-    case m @ NewSocket(name: Option[String]) => {
+    case m @ NewSocket(name: String) => {
 
-      val newSocket: ActorRef = socketEndpointFactory(self, context.system, name)
+      val newSocket: ActorRef = socketEndpointFactory(context.system, self, name)
 
       newSocket forward m
 

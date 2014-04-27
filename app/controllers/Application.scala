@@ -21,6 +21,8 @@ import global.Global
 
 object Application extends Controller {
 
+  // initiolization stuff...
+
   val conf = current.configuration
 
   val actorSystem = ActorSystem("reactive")
@@ -49,7 +51,7 @@ object Application extends Controller {
             Some(consumerSecret: String),
             Some(accessToken: String),
             Some(accessTokenSecret: String)) => {
-            val props = TwitterMessageStream.props(s, url, ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret), 5)
+            val props = TwitterMessageStream.props(s, url, ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret), 1)
             context.actorOf(props, "TwitterMessageStream")
           }
           case _ => throw new Exception("One or more of the twitter properties is missing")
@@ -59,34 +61,21 @@ object Application extends Controller {
     case _ => throw new Exception("Unknown messageStream type")
   }
 
-  val noOpMessageStreamFactory = (s: ActorRef, context: ActorRefFactory) => {
-
-    context.actorOf(Props(new Actor {
-      def receive = {
-        case _ => Unit
-      }
-    }))
-
-  }
-
-  val socketEndpointFactory = (s: ActorRef, context: ActorRefFactory, name: Option[String]) => {
-    val props = SocketEndpoint.props(s)
-    name match {
-      case Some(n) => context.actorOf(props, n)
-      case _ => context.actorOf(props)
-    }
-  }
+  val socketEndpointFactory = (context: ActorRefFactory, s: ActorRef, name: String) =>
+    context.actorOf(SocketEndpoint.props(s, name), name)
 
   val supervisor = actorSystem.actorOf(Supervisor.props(messageStreamFactory, socketEndpointFactory), "supervisor")
 
+  // routes
+
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(views.html.index("Your app is ready"))
   }
 
   def socket = WebSocket.async[JsValue] { request =>
 
     implicit val timeout = Timeout(Duration(1, SECONDS))
-    (supervisor ? Supervisor.NewSocket(Some(s"testSocket"))).mapTo[(Iteratee[JsValue, Unit], Enumerator[JsValue])]
+    (supervisor ? Supervisor.NewSocket(request.queryString("name")(0))).mapTo[(Iteratee[JsValue, Unit], Enumerator[JsValue])]
 
   }
 
