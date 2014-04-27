@@ -90,7 +90,9 @@ class SocketEndpoint(supervisor: ActorRef) extends Actor {
           case _ => Unit
         }
       }.map { _ => // this will map over the Iteratee once it has received EOF
+        //let the supervisor know we're done & stop
         supervisor ! Supervisor.SocketClosed(self)
+        context.stop(self)
       }
 
       // send the Iteratee and Enumerator back
