@@ -72,9 +72,6 @@ class TwitterMessageStream(
 
   val log = Logging(context.system, this)
 
-  log.debug(s"consumerKey: ${consumerKey}")
-  log.debug(s"requestToken: ${requestToken}")
-
   val req = WS.url(url).withRequestTimeout(-1).sign(OAuthCalculator(consumerKey, requestToken))
 
   // a builder to accumulate the bytes as they are received in chunks
