@@ -9,6 +9,8 @@ object MessageStream {
 
   case class Message(timestamp: java.util.Date, author: String, message: String)
 
+  case object StreamClosed
+
   /**
    * Creates a MessageStream.
    * ActorRef: reference to the supervisor actor
@@ -20,8 +22,6 @@ object MessageStream {
   case object StopStream
 
   case object StartStream
-
-  //def props(messages: List[MessageStream.Message]) = Props(classOf[MessageStream], messages)
 
 }
 

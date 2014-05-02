@@ -16,6 +16,8 @@ import scala.util.Random
 
 import java.util.Date
 
+class TwitterApiException(message: String) extends Exception(message)
+
 object TwitterMessageStream {
 
   case class TweetChunk(chunk: Array[Byte])
@@ -72,6 +74,8 @@ class TwitterMessageStream(
 
   val log = Logging(context.system, this)
 
+  log.debug(s"created a TwitterMessageStream with parent: ${self.path}")
+
   val req = WS.url(url).withRequestTimeout(-1).sign(OAuthCalculator(consumerKey, requestToken))
 
   // a builder to accumulate the bytes as they are received in chunks
@@ -84,11 +88,7 @@ class TwitterMessageStream(
       log.info("TwitterStream Started")
       req.get(headers => if (headers.status != 200) {
         log.warning(s"received a non-ok status code: ${headers.status}")
-        Iteratee.getChunks[Array[Byte]] map { (listOfAllChunks: List[Array[Byte]]) =>
-          //turn the list of chunks into one long ByteArray
-          val body: Array[Byte] = listOfAllChunks.foldLeft(Array[Byte]())((acc: Array[Byte], e: Array[Byte]) => { acc ++ e })
-          log.warning(new String(body, "UTF-8"))
-        }
+        Iteratee.skipToEof
       } else {
         // iteratee that is used to turn the raw json from the streaming API
         // into individual messages

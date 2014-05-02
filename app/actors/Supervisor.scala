@@ -7,8 +7,11 @@ import play.api.Play.current
 
 import akka.actor.{ Props, ActorRef, Actor, ActorRefFactory }
 import akka.event.{ EventStream, Logging, LoggingReceive }
+import akka.actor.OneForOneStrategy
+import akka.actor.SupervisorStrategy._
 
 import scala.collection.parallel.ParSet
+import scala.concurrent.duration._
 
 import actors.MessageStream.MessageStreamFactory
 import actors.SocketEndpoint.SocketEndpointFactory
@@ -35,9 +38,14 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
   import Supervisor._
 
+  // override val supervisorStrategy =
+  //   OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+  //     case _: MessageStream.StartStreamException => Stop
+  //   }
+
   val log = Logging(context.system, this)
 
-  val messageStream = messageStreamFactory(self, context.system)
+  val messageStream = messageStreamFactory(self, context)
 
   var sockets = ParSet[ActorRef]()
 
@@ -45,7 +53,7 @@ class Supervisor(messageStreamFactory: MessageStreamFactory,
 
     case m @ NewSocket(name: String) => {
 
-      val newSocket: ActorRef = socketEndpointFactory(context.system, self, name)
+      val newSocket: ActorRef = socketEndpointFactory(context, self, name)
 
       newSocket forward m
 
